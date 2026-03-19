@@ -45,6 +45,15 @@ export class GamePlayUI extends Component {
         input.on(Input.EventType.TOUCH_START, this._onTouchStart, this);
     }
 
+    onEnable(): void {
+        // Fix lifecycle timing: when ScreenManager activates this panel,
+        // the STATE_CHANGED event has already been dispatched. So we check
+        // the current state here and start the level if needed.
+        if (GameManager.instance.state === GameState.Playing) {
+            this.startLevel();
+        }
+    }
+
     onDestroy(): void {
         EventManager.off(GameEvents.STATE_CHANGED, this._onStateChanged, this);
         EventManager.off(GameEvents.SCORE_CHANGED, this._onScoreChanged, this);
