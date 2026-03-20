@@ -30,16 +30,16 @@ export class ResultScreenUI extends Component {
         const bg = new Node('ResultBg');
         this.node.addChild(bg);
         const bgUt = bg.addComponent(UITransform);
-        bgUt.setContentSize(new Size(960, 640));
+        bgUt.setContentSize(new Size(720, 1280));
         const bgGfx = bg.addComponent(Graphics);
         bgGfx.fillColor = new Color(20, 20, 40, 255);
-        bgGfx.rect(-480, -320, 960, 640);
+        bgGfx.rect(-360, -640, 720, 1280);
         bgGfx.fill();
 
         // ─── Title (Game Over / You Win) ────────────────
         const titleNode = new Node('ResultTitle');
         this.node.addChild(titleNode);
-        titleNode.setPosition(0, 160, 0);
+        titleNode.setPosition(0, 250, 0);
         const titleUt = titleNode.addComponent(UITransform);
         titleUt.setContentSize(new Size(400, 50));
         this._titleLabel = titleNode.addComponent(Label);
@@ -54,7 +54,7 @@ export class ResultScreenUI extends Component {
         // ─── Score display ──────────────────────────────
         const scoreNode = new Node('FinalScore');
         this.node.addChild(scoreNode);
-        scoreNode.setPosition(0, 70, 0);
+        scoreNode.setPosition(0, 140, 0);
         const scoreUt = scoreNode.addComponent(UITransform);
         scoreUt.setContentSize(new Size(400, 40));
         this._scoreLabel = scoreNode.addComponent(Label);
@@ -68,7 +68,7 @@ export class ResultScreenUI extends Component {
         // ─── Copy Score button ──────────────────────────
         const copyBtn = new Node('CopyButton');
         this.node.addChild(copyBtn);
-        copyBtn.setPosition(0, -10, 0);
+        copyBtn.setPosition(0, 30, 0);
         const copyUt = copyBtn.addComponent(UITransform);
         copyUt.setContentSize(new Size(240, 48));
         const copyGfx = copyBtn.addComponent(Graphics);
@@ -94,7 +94,7 @@ export class ResultScreenUI extends Component {
         // ─── Copy feedback label ────────────────────────
         const feedbackNode = new Node('CopyFeedback');
         this.node.addChild(feedbackNode);
-        feedbackNode.setPosition(0, -55, 0);
+        feedbackNode.setPosition(0, -25, 0);
         const fbUt = feedbackNode.addComponent(UITransform);
         fbUt.setContentSize(new Size(300, 24));
         this._copyFeedback = feedbackNode.addComponent(Label);
@@ -107,7 +107,7 @@ export class ResultScreenUI extends Component {
         // ─── Play Again button ──────────────────────────
         const playBtn = new Node('PlayAgainButton');
         this.node.addChild(playBtn);
-        playBtn.setPosition(0, -120, 0);
+        playBtn.setPosition(0, -100, 0);
         const playUt = playBtn.addComponent(UITransform);
         playUt.setContentSize(new Size(200, 48));
         const playGfx = playBtn.addComponent(Graphics);
@@ -133,7 +133,7 @@ export class ResultScreenUI extends Component {
         // ─── Main Menu button ───────────────────────────
         const menuBtn = new Node('MainMenuButton');
         this.node.addChild(menuBtn);
-        menuBtn.setPosition(0, -190, 0);
+        menuBtn.setPosition(0, -180, 0);
         const menuUt = menuBtn.addComponent(UITransform);
         menuUt.setContentSize(new Size(200, 48));
         const menuGfx = menuBtn.addComponent(Graphics);

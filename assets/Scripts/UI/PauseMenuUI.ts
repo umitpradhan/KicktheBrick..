@@ -29,10 +29,10 @@ export class PauseMenuUI extends Component {
         const overlay = new Node('PauseOverlay');
         this.node.addChild(overlay);
         const olUt = overlay.addComponent(UITransform);
-        olUt.setContentSize(new Size(960, 640));
+        olUt.setContentSize(new Size(720, 1280));
         const olGfx = overlay.addComponent(Graphics);
         olGfx.fillColor = new Color(0, 0, 0, 150);
-        olGfx.rect(-480, -320, 960, 640);
+        olGfx.rect(-360, -640, 720, 1280);
         olGfx.fill();
         // Block touches on overlay
         overlay.on(Node.EventType.TOUCH_START, (e: any) => { e.propagationStopped = true; });

@@ -31,27 +31,27 @@ export const GameEvents = {
 
 // ─── Game Configuration ─────────────────────────────────────
 export const GameConfig = {
-    // Canvas
-    DESIGN_WIDTH: 960,
-    DESIGN_HEIGHT: 640,
+    // Canvas (Portrait)
+    DESIGN_WIDTH: 720,
+    DESIGN_HEIGHT: 1280,
 
     // Ball
-    BALL_RADIUS: 8,
+    BALL_RADIUS: 10,
     BALL_BASE_SPEED: 400,
     BALL_MAX_ANGLE: 60,  // degrees from vertical
 
     // Paddle
-    PADDLE_WIDTH: 120,
-    PADDLE_HEIGHT: 16,
-    PADDLE_Y: -280,       // distance from center
-    PADDLE_CORNER_RADIUS: 8,
+    PADDLE_WIDTH: 140,
+    PADDLE_HEIGHT: 18,
+    PADDLE_Y: -540,       // near bottom in portrait
+    PADDLE_CORNER_RADIUS: 9,
 
     // Bricks
-    BRICK_WIDTH: 80,
-    BRICK_HEIGHT: 24,
+    BRICK_WIDTH: 78,
+    BRICK_HEIGHT: 26,
     BRICK_GAP: 4,
-    BRICK_AREA_TOP_Y: 280,   // top of brick grid area (from center)
-    BRICK_AREA_LEFT_X: -340,  // left edge of brick grid
+    BRICK_AREA_TOP_Y: 500,   // top of brick grid area (from center)
+    BRICK_AREA_LEFT_X: -330,  // left edge of brick grid
 
     // Scoring
     NORMAL_BRICK_POINTS: 10,
@@ -60,11 +60,11 @@ export const GameConfig = {
     // Lives
     MAX_LIVES: 3,
 
-    // Walls
-    WALL_TOP: 310,
-    WALL_BOTTOM: -310,
-    WALL_LEFT: -470,
-    WALL_RIGHT: 470,
+    // Walls (portrait bounds)
+    WALL_TOP: 600,
+    WALL_BOTTOM: -600,
+    WALL_LEFT: -350,
+    WALL_RIGHT: 350,
 };
 
 // ─── Brick Colors ───────────────────────────────────────────

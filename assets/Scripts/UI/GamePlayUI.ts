@@ -69,16 +69,16 @@ export class GamePlayUI extends Component {
         const bg = new Node('GameBg');
         this.node.addChild(bg);
         const bgUt = bg.addComponent(UITransform);
-        bgUt.setContentSize(new Size(960, 640));
+        bgUt.setContentSize(new Size(720, 1280));
         const bgGfx = bg.addComponent(Graphics);
         bgGfx.fillColor = new Color(15, 15, 35, 255);
-        bgGfx.rect(-480, -320, 960, 640);
+        bgGfx.rect(-360, -640, 720, 1280);
         bgGfx.fill();
 
         // Score label
         const scoreNode = new Node('ScoreLabel');
         this.node.addChild(scoreNode);
-        scoreNode.setPosition(-400, 300, 0);
+        scoreNode.setPosition(-300, 610, 0);
         const scoreUt = scoreNode.addComponent(UITransform);
         scoreUt.setContentSize(new Size(200, 30));
         scoreUt.setAnchorPoint(0, 0.5);
@@ -92,7 +92,7 @@ export class GamePlayUI extends Component {
         // Lives label
         const livesNode = new Node('LivesLabel');
         this.node.addChild(livesNode);
-        livesNode.setPosition(0, 300, 0);
+        livesNode.setPosition(0, 610, 0);
         const livesUt = livesNode.addComponent(UITransform);
         livesUt.setContentSize(new Size(200, 30));
         this._livesLabel = livesNode.addComponent(Label);
@@ -105,7 +105,7 @@ export class GamePlayUI extends Component {
         // Level label
         const levelNode = new Node('LevelLabel');
         this.node.addChild(levelNode);
-        levelNode.setPosition(350, 300, 0);
+        levelNode.setPosition(250, 610, 0);
         const levelUt = levelNode.addComponent(UITransform);
         levelUt.setContentSize(new Size(200, 30));
         this._levelLabel = levelNode.addComponent(Label);
@@ -119,7 +119,7 @@ export class GamePlayUI extends Component {
         // Pause button
         const pauseBtn = new Node('PauseButton');
         this.node.addChild(pauseBtn);
-        pauseBtn.setPosition(430, 300, 0);
+        pauseBtn.setPosition(320, 610, 0);
         const pauseUt = pauseBtn.addComponent(UITransform);
         pauseUt.setContentSize(new Size(40, 30));
         const pauseGfx = pauseBtn.addComponent(Graphics);
@@ -168,7 +168,7 @@ export class GamePlayUI extends Component {
         const wallNode = new Node('Walls');
         this._gameContainer!.addChild(wallNode);
         const wallUt = wallNode.addComponent(UITransform);
-        wallUt.setContentSize(new Size(960, 640));
+        wallUt.setContentSize(new Size(720, 1280));
         const gfx = wallNode.addComponent(Graphics);
 
         gfx.strokeColor = new Color(60, 60, 100, 255);
