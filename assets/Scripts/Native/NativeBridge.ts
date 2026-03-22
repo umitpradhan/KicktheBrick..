@@ -1,27 +1,20 @@
-import { sys } from 'cc';
-
-// Declare jsb.reflection for TypeScript when running on native platforms
-declare const jsb: {
-    reflection: {
-        callStaticMethod(className: string, methodName: string, signature: string, ...args: any[]): any;
-    };
-};
+import { sys, native } from 'cc';
 
 /**
- * NativeBridge — Android clipboard integration via jsb.reflection.
+ * NativeBridge — Android clipboard integration via native.reflection.
  * Falls back to navigator.clipboard for browser/editor testing.
  */
 export class NativeBridge {
 
     /**
      * Copy text to the device clipboard.
-     * On Android: calls Java ClipboardHelper via jsb.reflection.
+     * On Android: calls Java ClipboardHelper via native.reflection.
      * On Browser: uses navigator.clipboard API.
      */
     public static copyToClipboard(text: string): void {
-        if (sys.isNative && sys.platform === sys.Platform.ANDROID) {
+        if (sys.isNative && sys.os === sys.OS.ANDROID) {
             try {
-                jsb.reflection.callStaticMethod(
+                native.reflection.callStaticMethod(
                     'com/cocos/game/ClipboardHelper',
                     'copyToClipboard',
                     '(Ljava/lang/String;)V',

@@ -2,6 +2,7 @@ import { _decorator, Component, Node, Graphics, UITransform, Color, Vec2, Vec3, 
 import { GameConfig, BallColor, GameEvents, GameState } from '../Core/Constants';
 import { EventManager } from '../Core/EventManager';
 import { GameManager } from '../Core/GameManager';
+import { LevelConfigs } from '../Data/LevelConfigs';
 
 const { ccclass } = _decorator;
 
@@ -32,7 +33,7 @@ export class Ball extends Component {
         ut.setAnchorPoint(0.5, 0.5);
 
         // Draw ball
-        this._graphics = this.node.addComponent(Graphics);
+        this._graphics = this.node.getComponent(Graphics) || this.node.addComponent(Graphics);
         this._drawBall();
     }
 
@@ -193,10 +194,12 @@ export class Ball extends Component {
     }
 
     private _getCurrentSpeed(): number {
-        const lvl = GameManager.instance.currentLevel;
-        // LevelConfigs is imported by BrickManager; we read speed from GameConfig base
-        // or from the manager. For simplicity, use base + level multiplier.
-        return GameConfig.BALL_BASE_SPEED + lvl * 100;
+        const lvlIdx = Math.min(GameManager.instance.currentLevel, LevelConfigs.length - 1);
+        const cfg = LevelConfigs[lvlIdx];
+        if (cfg) {
+            return cfg.ballSpeed;
+        }
+        return GameConfig.BALL_BASE_SPEED + lvlIdx * 25;
     }
 
     private _drawBall(): void {

@@ -17,16 +17,19 @@ export class BrickManager extends Component {
 
     private _destroyableCount: number = 0;
     private _brickContainer: Node | null = null;
+    private _brickGrid: (Brick | null)[][] = [];
 
     /** The container node holding all bricks. Used by Ball for collision checks. */
     public get brickContainer(): Node | null { return this._brickContainer; }
 
     onLoad(): void {
         EventManager.on(GameEvents.BRICK_DESTROYED, this._onBrickDestroyed, this);
+        EventManager.on(GameEvents.BRICK_HIT, this._processSpecialHit, this);
     }
 
     onDestroy(): void {
         EventManager.off(GameEvents.BRICK_DESTROYED, this._onBrickDestroyed, this);
+        EventManager.off(GameEvents.BRICK_HIT, this._processSpecialHit, this);
     }
 
     /**
@@ -58,18 +61,29 @@ export class BrickManager extends Component {
         const startX = -gridWidth / 2 + brickW / 2;
         const startY = GameConfig.BRICK_AREA_TOP_Y;
 
+        // Initialize 2D grid matrix correctly
+        this._brickGrid = [];
+        for (let r = 0; r < config.rows; r++) {
+            this._brickGrid[r] = new Array(config.cols).fill(null);
+        }
+
         for (const brickCfg of config.bricks) {
             const x = startX + brickCfg.col * (brickW + gap);
             const y = startY - brickCfg.row * (brickH + gap);
 
-            BrickFactory.createBrick(
+            const brickNode = BrickFactory.createBrick(
                 brickCfg.type,
                 x, y,
                 brickW, brickH,
-                this._brickContainer
+                this._brickContainer,
+                brickCfg.col,
+                brickCfg.row
             );
 
-            if (brickCfg.type !== BrickType.Indestructible) {
+            const brick = brickNode.getComponent(Brick)!;
+            this._brickGrid[brickCfg.row][brickCfg.col] = brick;
+
+            if (brick.isDestroyable) {
                 this._destroyableCount++;
             }
         }
@@ -85,7 +99,59 @@ export class BrickManager extends Component {
         this._destroyableCount = 0;
     }
 
+    private _processSpecialHit(brickNode: Node): void {
+        const brick = brickNode.getComponent(Brick);
+        if (!brick) return;
+
+        if (brick.brickType === BrickType.InfectDoubleHit) {
+            this._infectNeighbors(brick.row, brick.col, BrickType.DoubleHit);
+        } else if (brick.brickType === BrickType.InfectIndestructible) {
+            this._infectNeighbors(brick.row, brick.col, BrickType.Indestructible);
+        }
+    }
+
+    private _infectNeighbors(row: number, col: number, type: BrickType): void {
+        const neighbors = [
+            { r: row - 1, c: col },
+            { r: row + 1, c: col },
+            { r: row, c: col - 1 },
+            { r: row, c: col + 1 }
+        ];
+
+        for (const n of neighbors) {
+            if (this._brickGrid[n.r] && this._brickGrid[n.r][n.c]) {
+                const target = this._brickGrid[n.r][n.c]!;
+                if (target.node.active && target.isDestroyable && target.brickType !== type) {
+                    
+                    // Tracking destroyable limits when turning indestructible magically
+                    if (type === BrickType.Indestructible) {
+                        this._destroyableCount--;
+                    }
+                    target.infect(type);
+                    
+                    if (this._destroyableCount <= 0) {
+                        EventManager.emit(GameEvents.LEVEL_COMPLETE);
+                    }
+                }
+            }
+        }
+    }
+
     private _onBrickDestroyed(brickNode: Node): void {
+        const brick = brickNode.getComponent(Brick);
+        if (brick) {
+            this._brickGrid[brick.row][brick.col] = null;
+
+            // Handle explosive side effects safely checking boundaries
+            if (brick.brickType === BrickType.ExplosiveSide) {
+                const left = this._brickGrid[brick.row][brick.col - 1];
+                if (left && left.node.active) left.onHit();
+
+                const right = this._brickGrid[brick.row][brick.col + 1];
+                if (right && right.node.active) right.onHit();
+            }
+        }
+
         this._destroyableCount--;
         if (this._destroyableCount <= 0) {
             EventManager.emit(GameEvents.LEVEL_COMPLETE);

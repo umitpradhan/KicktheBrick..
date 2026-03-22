@@ -25,7 +25,9 @@ export class BrickFactory {
         y: number,
         width: number,
         height: number,
-        parent: Node
+        parent: Node,
+        col: number,
+        row: number
     ): Node {
         const node = new Node(`Brick_${type}_${x}_${y}`);
         parent.addChild(node);
@@ -40,7 +42,7 @@ export class BrickFactory {
 
         // Brick component for game logic
         const brick = node.addComponent(Brick);
-        brick.init(type, width, height);
+        brick.init(type, width, height, col, row);
 
         // Position
         node.setPosition(x, y, 0);

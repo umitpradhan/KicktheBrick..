@@ -44,60 +44,71 @@ function gridFromMap(map: BrickType[][]): BrickConfig[] {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  LEVEL DEFINITIONS — add new levels here
+//  LEVEL DEFINITIONS — 20 Procedural Scaling Levels
 // ═══════════════════════════════════════════════════════════
 
-const N = BrickType.Normal;
-const D = BrickType.DoubleHit;
-const I = BrickType.Indestructible;
+function generate20Levels(): LevelConfig[] {
+    const levels: LevelConfig[] = [];
+    
+    for (let i = 0; i < 20; i++) {
+        // Linear increase of rows (min 5, max 9) and cols (min 6, max 8)
+        const rows = Math.min(9, 5 + Math.floor(i / 4));
+        const cols = Math.min(8, 6 + Math.floor(i / 5));
+        
+        // Procedurally build the brick map
+        const map: BrickType[][] = [];
+        
+        // Calculate dynamic anomalies inclusion probabilities
+        const allowDoubleHit = i >= 1;
+        const allowInfectDoubleHit = i >= 3;
+        const allowDoublePoints = i >= 4;
+        const allowExplosive = i >= 6;
+        const allowIndestructible = i >= 8;
+        const allowInfectIndestructible = i >= 12;
 
-/**
- * Level 1 — 5×8, all Normal bricks, standard speed.
- */
-const level1: LevelConfig = {
-    levelNumber: 1,
-    rows: 5,
-    cols: 8,
-    bricks: fullGrid(5, 8, BrickType.Normal),
-    ballSpeed: 400,
-};
+        for (let r = 0; r < rows; r++) {
+            const rowArr: BrickType[] = [];
+            for (let c = 0; c < cols; c++) {
+                
+                // Base is always Normal or nothing depending on pattern, here we mostly fill
+                let type = BrickType.Normal;
+                
+                const rand = Math.random();
+                
+                // Introduce escalating difficulty weighting
+                if (allowInfectIndestructible && rand < 0.03) {
+                    type = BrickType.InfectIndestructible;
+                } else if (allowExplosive && rand < 0.07) {
+                    type = BrickType.ExplosiveSide;
+                } else if (allowIndestructible && rand < 0.12) {
+                    type = BrickType.Indestructible;
+                } else if (allowDoublePoints && rand < 0.16) {
+                    type = BrickType.DoublePoints;
+                } else if (allowInfectDoubleHit && rand < 0.22) {
+                    type = BrickType.InfectDoubleHit;
+                } else if (allowDoubleHit && rand < 0.40) {
+                    type = BrickType.DoubleHit;
+                }
 
-/**
- * Level 2 — 6×8, Normal + DoubleHit mix, faster ball.
- */
-const level2: LevelConfig = {
-    levelNumber: 2,
-    rows: 6,
-    cols: 8,
-    bricks: gridFromMap([
-        [N, D, N, D, N, D, N, D],
-        [D, N, D, N, D, N, D, N],
-        [N, N, D, D, D, D, N, N],
-        [D, D, N, N, N, N, D, D],
-        [N, D, N, D, N, D, N, D],
-        [D, N, D, N, D, N, D, N],
-    ]),
-    ballSpeed: 500,
-};
+                rowArr.push(type);
+            }
+            map.push(rowArr);
+        }
 
-/**
- * Level 3 — 7×8, Normal + DoubleHit + Indestructible, fastest ball.
- */
-const level3: LevelConfig = {
-    levelNumber: 3,
-    rows: 7,
-    cols: 8,
-    bricks: gridFromMap([
-        [I, N, D, N, N, D, N, I],
-        [N, D, N, D, D, N, D, N],
-        [D, N, I, N, N, I, N, D],
-        [N, N, D, D, D, D, N, N],
-        [D, N, I, N, N, I, N, D],
-        [N, D, N, D, D, N, D, N],
-        [I, N, D, N, N, D, N, I],
-    ]),
-    ballSpeed: 600,
-};
+        // Ball speed: ramps up 25 speed units per level securely instead of massive unplayable spikes
+        const ballSpeed = 600 + (i * 25);
 
-/** All levels — extend this array to add more levels. */
-export const LevelConfigs: LevelConfig[] = [level1, level2, level3];
+        levels.push({
+            levelNumber: i + 1,
+            rows,
+            cols,
+            bricks: gridFromMap(map),
+            ballSpeed
+        });
+    }
+    
+    return levels;
+}
+
+/** 20 Scaled dynamic levels */
+export const LevelConfigs: LevelConfig[] = generate20Levels();

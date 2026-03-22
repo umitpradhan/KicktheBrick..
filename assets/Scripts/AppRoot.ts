@@ -1,50 +1,59 @@
-import { _decorator, Component, Node, UITransform, Size } from 'cc';
+import { _decorator, Component, Node } from 'cc';
 import { GameManager } from './Core/GameManager';
-import { GameState, GameEvents } from './Core/Constants';
+import { GameEvents } from './Core/Constants';
 import { ScreenManager } from './UI/ScreenManager';
-import { MainMenuUI } from './UI/MainMenuUI';
-import { GamePlayUI } from './UI/GamePlayUI';
-import { PauseMenuUI } from './UI/PauseMenuUI';
-import { ResultScreenUI } from './UI/ResultScreenUI';
 import { EventManager } from './Core/EventManager';
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 /**
  * AppRoot — entry-point component attached to Canvas in approot.scene.
- * Bootstraps all managers and creates the four UI panels programmatically.
+ * Bootstraps all managers and registers the four UI panels defined in the editor.
  * This is the ONLY component that needs to be manually attached in the editor.
  */
 @ccclass('AppRoot')
 export class AppRoot extends Component {
 
+    @property({ type: Node, tooltip: 'Main Menu panel node' })
+    public mainMenuPanel: Node | null = null;
+
+    @property({ type: Node, tooltip: 'Game Play panel node' })
+    public gamePlayPanel: Node | null = null;
+
+    @property({ type: Node, tooltip: 'Result screen panel node' })
+    public resultPanel: Node | null = null;
+
+    @property({ type: Node, tooltip: 'Pause overlay panel node' })
+    public pausePanel: Node | null = null;
+
     private _screenManager: ScreenManager | null = null;
 
     start(): void {
+        // Auto-resolve if properties were lost during editor hot-reload
+        if (!this.mainMenuPanel) this.mainMenuPanel = this.node.getChildByName('MainMenuPanel');
+        if (!this.gamePlayPanel) this.gamePlayPanel = this.node.getChildByName('GamePlayPanel');
+        if (!this.resultPanel) this.resultPanel = this.node.getChildByName('ResultPanel');
+        if (!this.pausePanel) this.pausePanel = this.node.getChildByName('PausePanel');
+
         // Initialize GameManager singleton
         const gm = GameManager.instance;
 
         // Create ScreenManager
         this._screenManager = new ScreenManager();
 
-        // Build panels
-        const menuPanel = this._createPanel('MainMenuPanel');
-        menuPanel.addComponent(MainMenuUI);
-
-        const gamePanel = this._createPanel('GamePlayPanel');
-        gamePanel.addComponent(GamePlayUI);
-
-        const resultPanel = this._createPanel('ResultPanel');
-        resultPanel.addComponent(ResultScreenUI);
-
-        const pausePanel = this._createPanel('PausePanel');
-        pausePanel.addComponent(PauseMenuUI);
-
         // Register panels with ScreenManager
-        this._screenManager.registerPanel(ScreenManager.MAIN_MENU, menuPanel);
-        this._screenManager.registerPanel(ScreenManager.GAME_PLAY, gamePanel);
-        this._screenManager.registerPanel(ScreenManager.RESULT, resultPanel);
-        this._screenManager.registerPanel(ScreenManager.PAUSE, pausePanel);
+        if (this.mainMenuPanel) {
+            this._screenManager.registerPanel(ScreenManager.MAIN_MENU, this.mainMenuPanel);
+        }
+        if (this.gamePlayPanel) {
+            this._screenManager.registerPanel(ScreenManager.GAME_PLAY, this.gamePlayPanel);
+        }
+        if (this.resultPanel) {
+            this._screenManager.registerPanel(ScreenManager.RESULT, this.resultPanel);
+        }
+        if (this.pausePanel) {
+            this._screenManager.registerPanel(ScreenManager.PAUSE, this.pausePanel);
+        }
 
         // Start on main menu
         this._screenManager.show(ScreenManager.MAIN_MENU);
@@ -53,22 +62,5 @@ export class AppRoot extends Component {
     onDestroy(): void {
         this._screenManager?.destroy();
         EventManager.clear();
-    }
-
-    /**
-     * Create a panel node with a full-size UITransform as a child of Canvas.
-     */
-    private _createPanel(name: string): Node {
-        const panel = new Node(name);
-        this.node.addChild(panel);
-
-        const ut = panel.addComponent(UITransform);
-        ut.setContentSize(new Size(960, 640));
-        ut.setAnchorPoint(0.5, 0.5);
-
-        panel.setPosition(0, 0, 0);
-        panel.active = false; // Start inactive
-
-        return panel;
     }
 }

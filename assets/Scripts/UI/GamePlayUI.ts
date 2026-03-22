@@ -1,5 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Graphics, Color,
-    Size, input, Input, EventTouch } from 'cc';
+import { _decorator, Component, Node, Label, input, Input, EventTouch, Graphics, Color, UITransform } from 'cc';
 import { GameConfig, GameEvents, GameState } from '../Core/Constants';
 import { EventManager } from '../Core/EventManager';
 import { GameManager } from '../Core/GameManager';
@@ -7,32 +6,68 @@ import { Ball } from '../Gameplay/Ball';
 import { Paddle } from '../Gameplay/Paddle';
 import { BrickManager } from '../Gameplay/BrickManager';
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 /**
  * GamePlayUI — orchestrator for gameplay.
- * Creates Ball, Paddle, BrickManager nodes and the HUD (score, lives, level, pause btn).
+ * HUD labels and gameplay nodes are wired via @property from the scene editor.
  * Listens to game events to update HUD and handle state transitions.
  */
 @ccclass('GamePlayUI')
 export class GamePlayUI extends Component {
 
-    // HUD labels
-    private _scoreLabel: Label | null = null;
-    private _livesLabel: Label | null = null;
-    private _levelLabel: Label | null = null;
+    // ─── HUD labels (wired in editor) ──────────────────
+    @property({ type: Label, tooltip: 'Score display label' })
+    public scoreLabel: Label | null = null;
 
-    // Gameplay nodes
+    @property({ type: Label, tooltip: 'Lives display label' })
+    public livesLabel: Label | null = null;
+
+    @property({ type: Label, tooltip: 'Level display label' })
+    public levelLabel: Label | null = null;
+
+    @property({ type: Node, tooltip: 'Pause button node' })
+    public pauseButton: Node | null = null;
+
+    // ─── Gameplay nodes (wired in editor) ──────────────
+    @property({ type: Node, tooltip: 'Container node for gameplay elements' })
+    public gameContainer: Node | null = null;
+
+    // Gameplay components (resolved at runtime)
     private _ball: Ball | null = null;
     private _paddle: Paddle | null = null;
     private _brickManager: BrickManager | null = null;
 
-    // Gameplay container (holds ball, paddle, bricks)
-    private _gameContainer: Node | null = null;
-
     onLoad(): void {
-        this._buildHUD();
-        this._buildGameContainer();
+        // Auto-resolve properties lost during hot-reload
+        if (!this.scoreLabel) this.scoreLabel = this.node.getChildByName('ScoreLabel')?.getComponent(Label) || null;
+        if (!this.livesLabel) this.livesLabel = this.node.getChildByName('LivesLabel')?.getComponent(Label) || null;
+        if (!this.levelLabel) this.levelLabel = this.node.getChildByName('LevelLabel')?.getComponent(Label) || null;
+        if (!this.pauseButton) this.pauseButton = this.node.getChildByName('PauseButton');
+        if (!this.gameContainer) this.gameContainer = this.node.getChildByName('GameContainer');
+
+        // Resolve gameplay components from gameContainer children
+        if (this.gameContainer) {
+            const paddleNode = this.gameContainer.getChildByName('Paddle');
+            if (paddleNode) this._paddle = paddleNode.getComponent(Paddle);
+
+            const ballNode = this.gameContainer.getChildByName('Ball');
+            if (ballNode) {
+                this._ball = ballNode.getComponent(Ball);
+                if (this._ball && paddleNode) {
+                    this._ball.paddleNode = paddleNode;
+                }
+            }
+
+
+            const bmNode = this.gameContainer.getChildByName('BrickManager');
+            if (bmNode) this._brickManager = bmNode.getComponent(BrickManager);
+        }
+
+        // Pause button handler
+        if (this.pauseButton) {
+            this.pauseButton.on(Node.EventType.TOUCH_END, this._onPausePressed, this);
+        }
 
         // Event listeners
         EventManager.on(GameEvents.STATE_CHANGED, this._onStateChanged, this);
@@ -40,15 +75,21 @@ export class GamePlayUI extends Component {
         EventManager.on(GameEvents.LIVES_CHANGED, this._onLivesChanged, this);
         EventManager.on(GameEvents.BALL_LOST, this._onBallLost, this);
         EventManager.on(GameEvents.LEVEL_COMPLETE, this._onLevelComplete, this);
+        EventManager.on(GameEvents.BRICK_HIT, this._onBrickHit, this);
 
         // Tap to launch ball
         input.on(Input.EventType.TOUCH_START, this._onTouchStart, this);
     }
 
     onEnable(): void {
-        // Fix lifecycle timing: when ScreenManager activates this panel,
-        // the STATE_CHANGED event has already been dispatched. So we check
-        // the current state here and start the level if needed.
+        this._updateResponsiveBounds();
+
+        // Safe to draw walls here because Widget has applied layout transforms
+        if (this.gameContainer) {
+            const wallsNode = this.gameContainer.getChildByName('Walls');
+            if (wallsNode) this._drawWalls(wallsNode);
+        }
+
         if (GameManager.instance.state === GameState.Playing) {
             this.startLevel();
         }
@@ -60,127 +101,11 @@ export class GamePlayUI extends Component {
         EventManager.off(GameEvents.LIVES_CHANGED, this._onLivesChanged, this);
         EventManager.off(GameEvents.BALL_LOST, this._onBallLost, this);
         EventManager.off(GameEvents.LEVEL_COMPLETE, this._onLevelComplete, this);
+        EventManager.off(GameEvents.BRICK_HIT, this._onBrickHit, this);
         input.off(Input.EventType.TOUCH_START, this._onTouchStart, this);
-    }
-
-    // ─── Build HUD ──────────────────────────────────────
-    private _buildHUD(): void {
-        // Background
-        const bg = new Node('GameBg');
-        this.node.addChild(bg);
-        const bgUt = bg.addComponent(UITransform);
-        bgUt.setContentSize(new Size(720, 1280));
-        const bgGfx = bg.addComponent(Graphics);
-        bgGfx.fillColor = new Color(15, 15, 35, 255);
-        bgGfx.rect(-360, -640, 720, 1280);
-        bgGfx.fill();
-
-        // Score label
-        const scoreNode = new Node('ScoreLabel');
-        this.node.addChild(scoreNode);
-        scoreNode.setPosition(-300, 610, 0);
-        const scoreUt = scoreNode.addComponent(UITransform);
-        scoreUt.setContentSize(new Size(200, 30));
-        scoreUt.setAnchorPoint(0, 0.5);
-        this._scoreLabel = scoreNode.addComponent(Label);
-        this._scoreLabel.string = 'Score: 0';
-        this._scoreLabel.fontSize = 22;
-        this._scoreLabel.lineHeight = 26;
-        this._scoreLabel.color = new Color(255, 255, 255, 255);
-        this._scoreLabel.horizontalAlign = Label.HorizontalAlign.LEFT;
-
-        // Lives label
-        const livesNode = new Node('LivesLabel');
-        this.node.addChild(livesNode);
-        livesNode.setPosition(0, 610, 0);
-        const livesUt = livesNode.addComponent(UITransform);
-        livesUt.setContentSize(new Size(200, 30));
-        this._livesLabel = livesNode.addComponent(Label);
-        this._livesLabel.string = `Lives: ${GameConfig.MAX_LIVES}`;
-        this._livesLabel.fontSize = 22;
-        this._livesLabel.lineHeight = 26;
-        this._livesLabel.color = new Color(255, 200, 200, 255);
-        this._livesLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
-
-        // Level label
-        const levelNode = new Node('LevelLabel');
-        this.node.addChild(levelNode);
-        levelNode.setPosition(250, 610, 0);
-        const levelUt = levelNode.addComponent(UITransform);
-        levelUt.setContentSize(new Size(200, 30));
-        this._levelLabel = levelNode.addComponent(Label);
-        this._levelLabel.string = 'Level: 1';
-        this._levelLabel.fontSize = 22;
-        this._levelLabel.lineHeight = 26;
-        this._levelLabel.color = new Color(200, 255, 200, 255);
-        this._levelLabel.horizontalAlign = Label.HorizontalAlign.RIGHT;
-        levelUt.setAnchorPoint(1, 0.5);
-
-        // Pause button
-        const pauseBtn = new Node('PauseButton');
-        this.node.addChild(pauseBtn);
-        pauseBtn.setPosition(320, 610, 0);
-        const pauseUt = pauseBtn.addComponent(UITransform);
-        pauseUt.setContentSize(new Size(40, 30));
-        const pauseGfx = pauseBtn.addComponent(Graphics);
-        pauseGfx.fillColor = new Color(100, 100, 100, 200);
-        pauseGfx.roundRect(-20, -15, 40, 30, 6);
-        pauseGfx.fill();
-        // Pause icon (two vertical bars)
-        pauseGfx.fillColor = new Color(255, 255, 255, 255);
-        pauseGfx.rect(-8, -8, 5, 16);
-        pauseGfx.fill();
-        pauseGfx.rect(3, -8, 5, 16);
-        pauseGfx.fill();
-
-        pauseBtn.on(Node.EventType.TOUCH_END, this._onPausePressed, this);
-    }
-
-    // ─── Build game container ───────────────────────────
-    private _buildGameContainer(): void {
-        this._gameContainer = new Node('GameContainer');
-        this.node.addChild(this._gameContainer);
-
-        // Walls (visual)
-        this._drawWalls();
-
-        // Paddle
-        const paddleNode = new Node('Paddle');
-        this._gameContainer.addChild(paddleNode);
-        this._paddle = paddleNode.addComponent(Paddle);
-
-        // Ball
-        const ballNode = new Node('Ball');
-        this._gameContainer.addChild(ballNode);
-        this._ball = ballNode.addComponent(Ball);
-        this._ball.paddleNode = paddleNode;
-
-        // BrickManager
-        const bmNode = new Node('BrickManager');
-        this._gameContainer.addChild(bmNode);
-        this._brickManager = bmNode.addComponent(BrickManager);
-
-        // Listen for BRICK_HIT to forward to Brick component
-        EventManager.on(GameEvents.BRICK_HIT, this._onBrickHit, this);
-    }
-
-    private _drawWalls(): void {
-        const wallNode = new Node('Walls');
-        this._gameContainer!.addChild(wallNode);
-        const wallUt = wallNode.addComponent(UITransform);
-        wallUt.setContentSize(new Size(720, 1280));
-        const gfx = wallNode.addComponent(Graphics);
-
-        gfx.strokeColor = new Color(60, 60, 100, 255);
-        gfx.lineWidth = 3;
-        // Left wall
-        gfx.moveTo(GameConfig.WALL_LEFT, GameConfig.WALL_BOTTOM);
-        gfx.lineTo(GameConfig.WALL_LEFT, GameConfig.WALL_TOP);
-        // Top wall
-        gfx.lineTo(GameConfig.WALL_RIGHT, GameConfig.WALL_TOP);
-        // Right wall
-        gfx.lineTo(GameConfig.WALL_RIGHT, GameConfig.WALL_BOTTOM);
-        gfx.stroke();
+        if (this.pauseButton) {
+            this.pauseButton.off(Node.EventType.TOUCH_END, this._onPausePressed, this);
+        }
     }
 
     // ─── Start / load level ─────────────────────────────
@@ -200,6 +125,45 @@ export class GamePlayUI extends Component {
         this._ball?.resetBall();
     }
 
+    private _updateResponsiveBounds(): void {
+        if (!this.gameContainer) return;
+        const uiTrans = this.gameContainer.getComponent(UITransform);
+        if (!uiTrans) return;
+
+        // Force widget alignment layout to resolve now since it was just activated
+        const widget = this.gameContainer.getComponent('cc.Widget') as any;
+        if (widget && typeof widget.updateAlignment === 'function') {
+            widget.updateAlignment();
+        }
+
+        const w = uiTrans.contentSize.width;
+        const h = uiTrans.contentSize.height;
+
+        // Container anchor is 0.5, 0.5, so local coords span from -w/2 to w/2
+        GameConfig.WALL_TOP = h / 2;
+        GameConfig.WALL_BOTTOM = -h / 2;
+        GameConfig.WALL_LEFT = -w / 2;
+        GameConfig.WALL_RIGHT = w / 2;
+
+        // Give the paddle 60 units of breathing room from the bottom
+        GameConfig.PADDLE_Y = GameConfig.WALL_BOTTOM + 60;
+        
+        // Ensure bricks spawn 60 units below the top wall
+        GameConfig.BRICK_AREA_TOP_Y = GameConfig.WALL_TOP - 60;
+    }
+
+    private _drawWalls(wallNode: Node): void {
+        const gfx = wallNode.getComponent(Graphics);
+        if (!gfx) return;
+        gfx.strokeColor = new Color(60, 60, 100, 255);
+        gfx.lineWidth = 3;
+        gfx.moveTo(GameConfig.WALL_LEFT, GameConfig.WALL_BOTTOM);
+        gfx.lineTo(GameConfig.WALL_LEFT, GameConfig.WALL_TOP);
+        gfx.lineTo(GameConfig.WALL_RIGHT, GameConfig.WALL_TOP);
+        gfx.lineTo(GameConfig.WALL_RIGHT, GameConfig.WALL_BOTTOM);
+        gfx.stroke();
+    }
+
     // ─── Event handlers ─────────────────────────────────
     private _onStateChanged(state: GameState): void {
         if (state === GameState.Playing) {
@@ -208,24 +172,21 @@ export class GamePlayUI extends Component {
     }
 
     private _onScoreChanged(score: number): void {
-        if (this._scoreLabel) this._scoreLabel.string = `Score: ${score}`;
+        if (this.scoreLabel) this.scoreLabel.string = `Score: ${score}`;
     }
 
     private _onLivesChanged(lives: number): void {
-        if (this._livesLabel) this._livesLabel.string = `Lives: ${lives}`;
+        if (this.livesLabel) this.livesLabel.string = `Lives: ${lives}`;
     }
 
     private _onBallLost(): void {
         const alive = GameManager.instance.loseLife();
         if (alive) {
-            // Reset ball position, wait for tap
             this._ball?.resetBall();
         }
-        // If not alive, GameManager changes state to GameOver
     }
 
     private _onLevelComplete(): void {
-        // Small delay then next level
         this.scheduleOnce(() => {
             GameManager.instance.nextLevel();
         }, 0.5);
@@ -251,8 +212,8 @@ export class GamePlayUI extends Component {
 
     private _updateHUD(): void {
         const gm = GameManager.instance;
-        if (this._scoreLabel) this._scoreLabel.string = `Score: ${gm.score}`;
-        if (this._livesLabel) this._livesLabel.string = `Lives: ${gm.lives}`;
-        if (this._levelLabel) this._levelLabel.string = `Level: ${gm.currentLevel + 1}`;
+        if (this.scoreLabel) this.scoreLabel.string = `Score: ${gm.score}`;
+        if (this.livesLabel) this.livesLabel.string = `Lives: ${gm.lives}`;
+        if (this.levelLabel) this.levelLabel.string = `Level: ${gm.currentLevel + 1}`;
     }
 }

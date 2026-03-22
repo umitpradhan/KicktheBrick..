@@ -25,7 +25,7 @@ export class Paddle extends Component {
         ut.setAnchorPoint(0.5, 0.5);
 
         // Draw paddle
-        this._graphics = this.node.addComponent(Graphics);
+        this._graphics = this.node.getComponent(Graphics) || this.node.addComponent(Graphics);
         this._drawPaddle();
 
         // Position

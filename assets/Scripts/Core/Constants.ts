@@ -5,6 +5,10 @@ export enum BrickType {
     Normal = 0,
     DoubleHit = 1,
     Indestructible = 2,
+    InfectDoubleHit = 3,         // Converts neighbors to DoubleHit
+    InfectIndestructible = 4,    // Converts neighbors to Indestructible
+    ExplosiveSide = 5,           // Destroys left & right bricks when hit
+    DoublePoints = 6,            // Grants 2x points
 }
 
 // ─── Game States ────────────────────────────────────────────
@@ -31,13 +35,13 @@ export const GameEvents = {
 
 // ─── Game Configuration ─────────────────────────────────────
 export const GameConfig = {
-    // Canvas (Portrait)
+    // Canvas (Portrait base)
     DESIGN_WIDTH: 720,
     DESIGN_HEIGHT: 1280,
 
     // Ball
     BALL_RADIUS: 10,
-    BALL_BASE_SPEED: 400,
+    BALL_BASE_SPEED: 600,
     BALL_MAX_ANGLE: 60,  // degrees from vertical
 
     // Paddle
@@ -69,9 +73,13 @@ export const GameConfig = {
 
 // ─── Brick Colors ───────────────────────────────────────────
 export const BrickColors: { [key: number]: Color } = {
-    [BrickType.Normal]: new Color(79, 195, 247, 255),           // #4FC3F7 blue
-    [BrickType.DoubleHit]: new Color(255, 138, 101, 255),       // #FF8A65 orange
-    [BrickType.Indestructible]: new Color(120, 144, 156, 255),  // #78909C steel
+    [BrickType.Normal]: new Color(79, 195, 247, 255),               // #4FC3F7 blue
+    [BrickType.DoubleHit]: new Color(255, 138, 101, 255),           // #FF8A65 orange
+    [BrickType.Indestructible]: new Color(120, 144, 156, 255),      // #78909C steel
+    [BrickType.InfectDoubleHit]: new Color(156, 39, 176, 255),      // #9C27B0 purple
+    [BrickType.InfectIndestructible]: new Color(69, 90, 100, 255),  // #455A64 dark steel
+    [BrickType.ExplosiveSide]: new Color(211, 47, 47, 255),         // #D32F2F bright red
+    [BrickType.DoublePoints]: new Color(255, 213, 79, 255),         // #FFD54F gold
 };
 
 export const DOUBLE_HIT_CRACKED_COLOR = new Color(239, 83, 80, 255); // #EF5350 red
