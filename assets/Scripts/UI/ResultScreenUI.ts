@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label } from 'cc';
+import { _decorator, Component, Node, Label, tween, Vec3, UITransform, BlockInputEvents, Size } from 'cc';
 import { GameState, GameEvents } from '../Core/Constants';
 import { GameManager } from '../Core/GameManager';
 import { NativeBridge } from '../Native/NativeBridge';
@@ -31,6 +31,14 @@ export class ResultScreenUI extends Component {
     public mainMenuButton: Node | null = null;
 
     onLoad(): void {
+        // Guarantee rigid background blocking on execution dynamically
+        let ut = this.node.getComponent(UITransform);
+        if (!ut) ut = this.node.addComponent(UITransform);
+        ut.setContentSize(new Size(720, 1280));
+        if (!this.node.getComponent(BlockInputEvents)) {
+            this.node.addComponent(BlockInputEvents);
+        }
+
         // Auto-resolve properties
         if (!this.titleLabel) this.titleLabel = this.node.getChildByName('ResultTitle')?.getComponent(Label) || null;
         if (!this.scoreLabel) this.scoreLabel = this.node.getChildByName('FinalScore')?.getComponent(Label) || null;
@@ -52,6 +60,12 @@ export class ResultScreenUI extends Component {
 
     onEnable(): void {
         this._updateDisplay();
+
+        // Bounce Entrance Juice
+        this.node.scale = new Vec3(0, 0, 0);
+        tween(this.node)
+            .to(0.5, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
+            .start();
     }
 
     onDestroy(): void {

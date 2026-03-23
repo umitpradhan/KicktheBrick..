@@ -1,7 +1,8 @@
 import { _decorator, Component, Node, Graphics, UITransform, input, Input,
     EventTouch, EventMouse, Vec3, Size, view } from 'cc';
-import { GameConfig, PaddleColor, GameState } from '../Core/Constants';
+import { GameConfig, PaddleTiers, GameState } from '../Core/Constants';
 import { GameManager } from '../Core/GameManager';
+import { UserData } from '../Data/UserData';
 
 const { ccclass } = _decorator;
 
@@ -13,18 +14,25 @@ const { ccclass } = _decorator;
 export class Paddle extends Component {
 
     private _graphics: Graphics | null = null;
+    private _width: number = GameConfig.PADDLE_WIDTH;
     private _halfWidth: number = GameConfig.PADDLE_WIDTH / 2;
 
     onLoad(): void {
-        // UITransform for size
+        // Powerup Override: Neon Green (+20% Width)
+        if (UserData.instance.equippedPaddleId === 1) {
+            this._width = GameConfig.PADDLE_WIDTH * 1.2;
+            this._halfWidth = this._width / 2;
+        }
+
+        // UITransform for active physical size tracking
         let ut = this.node.getComponent(UITransform);
         if (!ut) {
             ut = this.node.addComponent(UITransform);
         }
-        ut.setContentSize(new Size(GameConfig.PADDLE_WIDTH, GameConfig.PADDLE_HEIGHT));
+        ut.setContentSize(new Size(this._width, GameConfig.PADDLE_HEIGHT));
         ut.setAnchorPoint(0.5, 0.5);
 
-        // Draw paddle
+        // Draw paddle correctly proportioned
         this._graphics = this.node.getComponent(Graphics) || this.node.addComponent(Graphics);
         this._drawPaddle();
 
@@ -72,12 +80,17 @@ export class Paddle extends Component {
 
     private _drawPaddle(): void {
         if (!this._graphics) return;
+
+        // Retrieve player's permanently equipped color
+        const equippedId = UserData.instance.equippedPaddleId;
+        const skin = PaddleTiers.find(t => t.id === equippedId) || PaddleTiers[0];
+
         this._graphics.clear();
-        this._graphics.fillColor = PaddleColor;
+        this._graphics.fillColor = skin.color;
         this._graphics.roundRect(
-            -GameConfig.PADDLE_WIDTH / 2,
+            -this._halfWidth,
             -GameConfig.PADDLE_HEIGHT / 2,
-            GameConfig.PADDLE_WIDTH,
+            this._width,
             GameConfig.PADDLE_HEIGHT,
             GameConfig.PADDLE_CORNER_RADIUS
         );

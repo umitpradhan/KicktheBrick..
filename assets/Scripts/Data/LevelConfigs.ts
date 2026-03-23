@@ -19,6 +19,8 @@ export interface LevelConfig {
     cols: number;
     bricks: BrickConfig[];
     ballSpeed: number;
+    targetTime: number; // For 3-star rating
+    targetScore: number; // For 3-star rating
 }
 
 // ─── Helper: fill full grid with one type ───────────────────
@@ -97,13 +99,19 @@ function generate20Levels(): LevelConfig[] {
 
         // Ball speed: ramps up 25 speed units per level securely instead of massive unplayable spikes
         const ballSpeed = 600 + (i * 25);
+        
+        // 3-Star Target Thresholds linearly scaling logic requirements implicitly
+        const targetTime = 60 + (i * 5); // Level 1 = 60s, Level 20 = 155s
+        const targetScore = 500 + (Math.pow(i, 2) * 50); // Massive scaling for high combos: 500, 550, 700, 950...
 
         levels.push({
             levelNumber: i + 1,
             rows,
             cols,
             bricks: gridFromMap(map),
-            ballSpeed
+            ballSpeed,
+            targetTime,
+            targetScore
         });
     }
     

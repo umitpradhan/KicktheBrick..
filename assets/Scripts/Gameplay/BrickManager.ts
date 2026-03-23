@@ -1,10 +1,12 @@
 import { _decorator, Component, Node } from 'cc';
-import { BrickType, GameConfig, GameEvents } from '../Core/Constants';
+import { BrickType, BrickColors, GameConfig, GameEvents } from '../Core/Constants';
 import { EventManager } from '../Core/EventManager';
 import { BrickFactory } from './BrickFactory';
 import { Brick } from './Brick';
 import { LevelConfigs, LevelConfig } from '../Data/LevelConfigs';
 import { GameManager } from '../Core/GameManager';
+import { AudioManager } from '../Core/AudioManager';
+import { ParticleManager } from './ParticleManager';
 
 const { ccclass } = _decorator;
 
@@ -89,13 +91,19 @@ export class BrickManager extends Component {
         }
     }
 
-    /** Remove all current bricks. */
+    /** Remove all current bricks safely pushing them back to pool cache. */
     public clearBricks(): void {
         if (this._brickContainer) {
-            this._brickContainer.destroyAllChildren();
+            // Reclaim any remaining active chunks
+            const remaining = [...this._brickContainer.children];
+            for (const child of remaining) {
+                BrickFactory.reclaimBrick(child);
+            }
+            
             this._brickContainer.destroy();
             this._brickContainer = null;
         }
+        this._brickGrid = [];
         this._destroyableCount = 0;
     }
 
@@ -142,17 +150,37 @@ export class BrickManager extends Component {
         if (brick) {
             this._brickGrid[brick.row][brick.col] = null;
 
+            // Juice: Spawn satisfying geometric debris matching the exact object
+            if (ParticleManager.instance) {
+                ParticleManager.instance.spawnBurst(
+                    brickNode.position.x, 
+                    brickNode.position.y, 
+                    BrickColors[brick.brickType] || BrickColors[BrickType.Normal]
+                );
+            }
+
             // Handle explosive side effects safely checking boundaries
             if (brick.brickType === BrickType.ExplosiveSide) {
+                // Juice: Heavy Shake + Explosion Audio
+                EventManager.emit(GameEvents.SCREEN_SHAKE, 15, 0.4);
+                if (AudioManager.instance) AudioManager.instance.playExplosion();
+
                 const left = this._brickGrid[brick.row][brick.col - 1];
                 if (left && left.node.active) left.onHit();
 
                 const right = this._brickGrid[brick.row][brick.col + 1];
                 if (right && right.node.active) right.onHit();
+            } else {
+                // Standard brick shatter SFX
+                if (AudioManager.instance) AudioManager.instance.playBrickShatter();
             }
         }
 
         this._destroyableCount--;
+        
+        // Push safely to factory pool buffer
+        BrickFactory.reclaimBrick(brickNode);
+
         if (this._destroyableCount <= 0) {
             EventManager.emit(GameEvents.LEVEL_COMPLETE);
         }

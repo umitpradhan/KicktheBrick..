@@ -59,6 +59,10 @@ export class AppRoot extends Component {
         this._screenManager.show(ScreenManager.MAIN_MENU);
     }
 
+    update(dt: number): void {
+        GameManager.instance.tickTimer(dt);
+    }
+
     onDestroy(): void {
         this._screenManager?.destroy();
         EventManager.clear();

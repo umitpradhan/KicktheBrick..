@@ -2,6 +2,7 @@ import { _decorator, Component, Node, Graphics, UITransform, Color, Vec2, Vec3, 
 import { GameConfig, BallColor, GameEvents, GameState } from '../Core/Constants';
 import { EventManager } from '../Core/EventManager';
 import { GameManager } from '../Core/GameManager';
+import { AudioManager } from '../Core/AudioManager';
 import { LevelConfigs } from '../Data/LevelConfigs';
 
 const { ccclass } = _decorator;
@@ -66,49 +67,57 @@ export class Ball extends Component {
             return;
         }
 
-        const pos = this.node.position;
-        let nx = pos.x + this._velocity.x * dt;
-        let ny = pos.y + this._velocity.y * dt;
+        const steps = Math.ceil((this._getCurrentSpeed() * dt) / (this._radius * 0.5));
+        const subDt = dt / steps;
+        
+        let posRef = { x: this.node.position.x, y: this.node.position.y };
 
-        // ─── Wall collisions ────────────────────────────
-        // Left wall
-        if (nx - this._radius <= GameConfig.WALL_LEFT) {
-            nx = GameConfig.WALL_LEFT + this._radius;
-            this._velocity.x = Math.abs(this._velocity.x);
-        }
-        // Right wall
-        if (nx + this._radius >= GameConfig.WALL_RIGHT) {
-            nx = GameConfig.WALL_RIGHT - this._radius;
-            this._velocity.x = -Math.abs(this._velocity.x);
-        }
-        // Top wall
-        if (ny + this._radius >= GameConfig.WALL_TOP) {
-            ny = GameConfig.WALL_TOP - this._radius;
-            this._velocity.y = -Math.abs(this._velocity.y);
+        for (let i = 0; i < steps; i++) {
+            posRef.x += this._velocity.x * subDt;
+            posRef.y += this._velocity.y * subDt;
+
+            // ─── Wall collisions ────────────────────────────
+            // Left wall
+            if (posRef.x - this._radius <= GameConfig.WALL_LEFT) {
+                posRef.x = GameConfig.WALL_LEFT + this._radius;
+                this._velocity.x = Math.abs(this._velocity.x);
+            }
+            // Right wall
+            if (posRef.x + this._radius >= GameConfig.WALL_RIGHT) {
+                posRef.x = GameConfig.WALL_RIGHT - this._radius;
+                this._velocity.x = -Math.abs(this._velocity.x);
+            }
+            // Top wall
+            if (posRef.y + this._radius >= GameConfig.WALL_TOP) {
+                posRef.y = GameConfig.WALL_TOP - this._radius;
+                this._velocity.y = -Math.abs(this._velocity.y);
+            }
+
+            // ─── Bottom — ball lost ─────────────────────────
+            if (posRef.y - this._radius <= GameConfig.WALL_BOTTOM) {
+                this._launched = false;
+                EventManager.emit(GameEvents.BALL_LOST);
+                return;
+            }
+
+            // ─── Paddle collision ───────────────────────────
+            if (this.paddleNode) {
+                this._checkPaddleCollision(posRef);
+            }
+
+            // ─── Brick collisions ───────────────────────────
+            if (this.brickContainer && this._launched) {
+                this._checkBrickCollisions(posRef);
+            }
         }
 
-        // ─── Bottom — ball lost ─────────────────────────
-        if (ny - this._radius <= GameConfig.WALL_BOTTOM) {
-            this._launched = false;
-            EventManager.emit(GameEvents.BALL_LOST);
-            return;
-        }
-
-        // ─── Paddle collision ───────────────────────────
-        if (this.paddleNode) {
-            this._checkPaddleCollision(nx, ny);
-        }
-
-        // ─── Brick collisions ───────────────────────────
-        if (this.brickContainer) {
-            this._checkBrickCollisions(nx, ny);
-        }
-
-        this.node.setPosition(nx, ny, 0);
+        this.node.setPosition(posRef.x, posRef.y, 0);
     }
 
     // ─── Paddle bounce with angle calculation ───────────
-    private _checkPaddleCollision(bx: number, by: number): void {
+    private _checkPaddleCollision(posRef: { x: number, y: number }): void {
+        const bx = posRef.x;
+        const by = posRef.y;
         const paddle = this.paddleNode!;
         const pp = paddle.position;
         const put = paddle.getComponent(UITransform)!;
@@ -126,6 +135,13 @@ export class Ball extends Component {
             by - this._radius < paddleTop &&
             by + this._radius > paddleBottom &&
             this._velocity.y < 0) {
+            
+            // Juice: Play heavy bonk
+            if (AudioManager.instance) AudioManager.instance.playPaddleBonk();
+            
+            // Hardcore Rules: Punish players touching the Paddle natively resetting the combo
+            GameManager.instance.resetCombo();
+
             // Calculate bounce angle based on hit position
             const hitOffset = (bx - pp.x) / (pw / 2); // -1 to 1
             const maxAngle = GameConfig.BALL_MAX_ANGLE * Math.PI / 180;
@@ -134,11 +150,16 @@ export class Ball extends Component {
 
             this._velocity.x = Math.sin(angle) * speed;
             this._velocity.y = Math.abs(Math.cos(angle) * speed);
+
+            // Positional correction out of paddle
+            posRef.y = paddleTop + this._radius;
         }
     }
 
     // ─── Brick collision checks ─────────────────────────
-    private _checkBrickCollisions(bx: number, by: number): void {
+    private _checkBrickCollisions(posRef: { x: number, y: number }): void {
+        const bx = posRef.x;
+        const by = posRef.y;
         const bricks = this.brickContainer!.children;
         for (let i = bricks.length - 1; i >= 0; i--) {
             const brick = bricks[i];
@@ -170,11 +191,17 @@ export class Ball extends Component {
                 const minOverlapX = Math.min(overlapLeft, overlapRight);
                 const minOverlapY = Math.min(overlapTop, overlapBottom);
 
+                // Positional correction and velocity reflection
                 if (minOverlapX < minOverlapY) {
                     this._velocity.x = -this._velocity.x;
+                    posRef.x += (this._velocity.x > 0 ? 1 : -1) * (minOverlapX + 0.1);
                 } else {
                     this._velocity.y = -this._velocity.y;
+                    posRef.y += (this._velocity.y > 0 ? 1 : -1) * (minOverlapY + 0.1);
                 }
+
+                // Hardcore Rules: Reward player for aggressive brick combinations
+                GameManager.instance.increaseCombo();
 
                 // Notify brick
                 EventManager.emit(GameEvents.BRICK_HIT, brick);

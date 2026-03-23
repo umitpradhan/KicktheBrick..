@@ -91,11 +91,23 @@ export class Brick extends Component {
         this._hitsRemaining--;
 
         if (this._hitsRemaining <= 0) {
-            // Brick destroyed
-            GameManager.instance.addScore(this._points);
-            EventManager.emit(GameEvents.BRICK_DESTROYED, this.node);
+            // Formally query final evaluations validating combinations actively
+            const rawPoints = this._points;
+            const finalPoints = GameManager.instance.evaluateScore(rawPoints);
+            const multi = GameManager.instance.comboMultiplier;
+
+            // Trigger Juice Feedback Bubble explicitly mapping local structural coordinates
+            EventManager.emit(GameEvents.POPUP_SCORE, {
+                position: this.node.position.clone(),
+                score: finalPoints,
+                multiplier: multi
+            });
+
+            // Formalize brick destruction
+            GameManager.instance.addScore(rawPoints);
             this.node.active = false;
-            this.node.destroy();
+            EventManager.emit(GameEvents.BRICK_DESTROYED, this.node);
+            // Reclammation is handled explicitly by BrickManager.
         } else {
             // DoubleHit cracked — redraw with cracked color
             this._draw(DOUBLE_HIT_CRACKED_COLOR);

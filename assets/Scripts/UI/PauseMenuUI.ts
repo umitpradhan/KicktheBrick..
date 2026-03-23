@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, director } from 'cc';
+import { _decorator, Component, Node, director, tween, Vec3, UITransform, BlockInputEvents, Size } from 'cc';
 import { GameState, GameEvents } from '../Core/Constants';
 import { EventManager } from '../Core/EventManager';
 import { GameManager } from '../Core/GameManager';
@@ -27,6 +27,14 @@ export class PauseMenuUI extends Component {
     private _isPaused: boolean = false;
 
     onLoad(): void {
+        // Block interaction bleeding into the background physically
+        let ut = this.node.getComponent(UITransform);
+        if (!ut) ut = this.node.addComponent(UITransform);
+        ut.setContentSize(new Size(720, 1280));
+        if (!this.node.getComponent(BlockInputEvents)) {
+            this.node.addComponent(BlockInputEvents);
+        }
+
         // Auto-resolve properties
         if (!this.overlay) this.overlay = this.node.getChildByName('PauseOverlay');
         const dialog = this.node.getChildByName('PauseDialogPanel');
@@ -51,6 +59,11 @@ export class PauseMenuUI extends Component {
         }
 
         EventManager.on(GameEvents.STATE_CHANGED, this._onStateChanged, this);
+    }
+
+    onEnable(): void {
+        // Keep static to prevent `director.pause()` from freezing the tween mid-animation offscreen!
+        this.node.setPosition(0, 0, 0);
     }
 
     onDestroy(): void {

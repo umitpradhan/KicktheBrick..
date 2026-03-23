@@ -31,6 +31,11 @@ export const GameEvents = {
     SCORE_CHANGED: 'SCORE_CHANGED',
     LIVES_CHANGED: 'LIVES_CHANGED',
     STATE_CHANGED: 'STATE_CHANGED',
+    SCREEN_SHAKE: 'SCREEN_SHAKE',
+    COMBO_CHANGED: 'COMBO_CHANGED',
+    POPUP_SCORE: 'POPUP_SCORE',
+    TIMER_CHANGED: 'TIMER_CHANGED',
+    LEVEL_START: 'LEVEL_START',
 } as const;
 
 // ─── Game Configuration ─────────────────────────────────────
@@ -71,6 +76,32 @@ export const GameConfig = {
     WALL_RIGHT: 350,
 };
 
+// ─── Colors ──────────────────────────────────────────────────
+export const PaddleColor = new Color(52, 152, 219); // Fallback Blue
+export const BallColor = new Color(252, 219, 3); // Yellow
+
+export interface PaddleSkin {
+    id: number;
+    name: string;
+    price: number;
+    powerDescription: string;
+    unlockLevelsWon: number;
+    unlockHighScore: number;
+    color: Color;
+}
+
+export const PaddleTiers: PaddleSkin[] = [
+    { id: 0, name: "Classic Blue", price: 0, powerDescription: "No Special Power", unlockLevelsWon: 0, unlockHighScore: 0, color: new Color(52, 152, 219) },
+    // Early-Game Hook (Day 1 Retention hook)
+    { id: 1, name: "Neon Green", price: 250, powerDescription: "+20% Paddle Width", unlockLevelsWon: 2, unlockHighScore: 500, color: new Color(46, 204, 113) },
+    // Mid-Game Grind (Day 3 Retention hook)
+    { id: 2, name: "Crimson Red", price: 1500, powerDescription: "Starts with +1 Extra Life", unlockLevelsWon: 8, unlockHighScore: 2500, color: new Color(231, 76, 60) },
+    // Ultimate Late-Game Flex Sink (Day 7+ Retention hook)
+    { id: 3, name: "Royal Gold", price: 10000, powerDescription: "Base Points x2 Multiplier", unlockLevelsWon: 20, unlockHighScore: 10000, color: new Color(241, 196, 15) },
+];
+
+export const DOUBLE_HIT_CRACKED_COLOR = new Color(211, 84, 0, 150); // Semi-transparent Orange
+
 // ─── Brick Colors ───────────────────────────────────────────
 export const BrickColors: { [key: number]: Color } = {
     [BrickType.Normal]: new Color(79, 195, 247, 255),               // #4FC3F7 blue
@@ -81,8 +112,3 @@ export const BrickColors: { [key: number]: Color } = {
     [BrickType.ExplosiveSide]: new Color(211, 47, 47, 255),         // #D32F2F bright red
     [BrickType.DoublePoints]: new Color(255, 213, 79, 255),         // #FFD54F gold
 };
-
-export const DOUBLE_HIT_CRACKED_COLOR = new Color(239, 83, 80, 255); // #EF5350 red
-
-export const PaddleColor = new Color(224, 224, 224, 255);  // #E0E0E0
-export const BallColor = new Color(255, 255, 255, 255);     // #FFFFFF
